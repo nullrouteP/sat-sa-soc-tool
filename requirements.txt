@@ -1,0 +1,7 @@
+pandas
+faker
+scikit-learn
+Flask
+reportlab
+pyyaml
+pytest

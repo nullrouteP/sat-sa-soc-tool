@@ -1,0 +1,347 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="text-gradient" style="font-size: 2.5rem; margin-bottom: 0.3rem;">Command Center</h1>
+        <p class="text-muted" style="font-size: 1.05rem;">Supervisory Analytics Tool for SOC Performance Assessment</p>
+    </div>
+    <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+        <!-- Role-Based View Switcher -->
+        <div class="view-switcher">
+            <a href="/?view=manager" class="view-switcher-btn {% if view_mode == 'manager' %}active{% endif %}" id="viewManagerBtn">
+                <svg style="width: 15px; height: 15px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                Manager View
+            </a>
+            <a href="/?view=analyst" class="view-switcher-btn {% if view_mode == 'analyst' %}active{% endif %}" id="viewAnalystBtn">
+                <svg style="width: 15px; height: 15px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"></path></svg>
+                Analyst View
+            </a>
+        </div>
+        <div class="badge badge-medium" style="font-size: 0.85rem;">
+            <span style="display:inline-block; width:8px; height:8px; background:var(--accent-warning); border-radius:50%; margin-right:8px; box-shadow: 0 0 8px var(--accent-warning);"></span>
+            Live Audit Stream
+        </div>
+    </div>
+</div>
+
+{% if view_mode == 'manager' %}
+<!-- ======================================================================= -->
+<!-- MANAGER VIEW: EXECUTIVE KPI CARDS, RISK INDEX, HIGH-LEVEL SUMMARIES    -->
+<!-- ======================================================================= -->
+<div class="grid-3" style="margin-bottom: 2rem;">
+    <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
+        <h3 class="text-muted" style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em;">Critical Compliance Exposure</h3>
+        <div class="stat-value text-danger" style="font-size: 3rem;">{{ critical_count }}</div>
+        <p class="text-danger" style="font-size: 0.85rem; margin-top: 0.5rem;">Severe findings rated 9-10/10 severity</p>
+    </div>
+    <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
+        <h3 class="text-muted" style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em;">High Priority Findings</h3>
+        <div class="stat-value" style="font-size: 3rem; color: var(--accent-warning);">{{ high_count }}</div>
+        <p class="text-warning" style="font-size: 0.85rem; margin-top: 0.5rem;">Rated 7-8/10 severity across {{ total_entities }} entities</p>
+    </div>
+    <div class="card" style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
+        <h3 class="text-muted" style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; align-self: flex-start; width: 100%;">Sector Risk Allocation</h3>
+        <div style="width: 100%; height: 130px; position: relative;">
+            <canvas id="sectorChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Manager Table 1: Executive Entity Risk Ranking -->
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <div>
+            <h2 style="margin-bottom: 0.2rem;">Executive Entity Risk Ranking</h2>
+            <p class="text-muted" style="font-size: 0.9rem;">Organizations prioritized by cumulative risk index (severity score weighting).</p>
+        </div>
+        <div>
+            <input type="text" id="searchInput" placeholder="Search entity or sector..." style="background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); padding: 8px 16px; border-radius: 6px; color: white; outline: none; font-family: 'Inter';">
+        </div>
+    </div>
+    
+    <div style="overflow-x: auto;">
+        <table id="entityTable">
+            <thead>
+                <tr>
+                    <th>Target Entity</th>
+                    <th>Sector</th>
+                    <th>Cumulative Risk Index</th>
+                    <th>Primary Violation</th>
+                    <th>Supervisory Posture</th>
+                    <th style="text-align: right;">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for e in entities %}
+                <tr class="entity-row">
+                    <td>
+                        <strong class="entity-name" style="font-family: 'Outfit'; font-size: 1.05rem; color: #fff;">{{ e.name }}</strong>
+                    </td>
+                    <td class="entity-sector">
+                        <span style="color: #cbd5e1;">{{ e.sector }}</span>
+                    </td>
+                    <td>
+                        <span style="font-family: monospace; font-size: 1rem; color: var(--accent-blue); font-weight: 700;">
+                            {{ e.risk_score }} pts
+                        </span>
+                        <small class="text-muted">({{ e.findings_count }} findings)</small>
+                    </td>
+                    <td>
+                        <span style="color: #e2e8f0; font-size: 0.9rem;">{{ e.primary_violation }}</span>
+                    </td>
+                    <td>
+                        <span class="badge {{ e.status_class }}" style="font-size: 0.75rem; padding: 4px 10px;">
+                            {{ e.status }}
+                        </span>
+                    </td>
+                    <td style="text-align: right;">
+                        <a href="/entity/{{ e.entity_id }}" class="btn" style="padding: 6px 14px; font-size: 0.85rem;">Review Entity &rarr;</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Manager Table 2: Top Actionable Findings -->
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.2rem;">
+        <div>
+            <h2 style="margin-bottom: 0.2rem;">Top Priority Actionable Findings</h2>
+            <p class="text-muted" style="font-size: 0.9rem;">Highest severity policy violations requiring supervisory intervention.</p>
+        </div>
+        <a href="/raw_anomalies?view=manager" class="text-muted" style="font-size: 0.85rem; text-decoration: none; color: var(--accent-blue);">View All Ranked Findings &rarr;</a>
+    </div>
+
+    <div style="overflow-x: auto;">
+        <table>
+            <thead>
+                <tr>
+                    <th>Target Entity</th>
+                    <th>Risk Category / Rule</th>
+                    <th>Assessed Severity</th>
+                    <th>Supervisory Summary</th>
+                    <th style="text-align: right;">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for f in top_findings %}
+                <tr>
+                    <td>
+                        <strong style="font-family: 'Outfit'; color: #fff;">{{ f.entity_name }}</strong>
+                    </td>
+                    <td>
+                        <span style="color: var(--accent-purple); font-weight: 600;">
+                            {{ f.rule_triggered.replace('_', ' ').title() }}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="badge {% if f.severity_score >= 9 %}badge-critical{% elif f.severity_score >= 7 %}badge-high{% else %}badge-medium{% endif %}">
+                            {{ f.severity_of_finding }} ({{ f.severity_score }}/10)
+                        </span>
+                    </td>
+                    <td><small style="color: #cbd5e1; font-size: 0.85rem;">{{ f.explanation }}</small></td>
+                    <td style="text-align: right;">
+                        <a href="/finding/{{ f.entity_id }}/{{ f.finding_idx }}" class="btn" style="padding: 6px 12px; font-size: 0.8rem;">Dossier</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% else %}
+<!-- ======================================================================= -->
+<!-- ANALYST VIEW: HIGH-DENSITY TECHNICAL METRICS, RAW PAYLOADS, IDS        -->
+<!-- ======================================================================= -->
+<div class="grid-3" style="margin-bottom: 2rem;">
+    <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
+        <h3 class="text-muted" style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em;">Raw Ingested Alerts</h3>
+        <div class="stat-value" style="font-size: 3rem; color: var(--accent-blue);">{{ total_alerts }}</div>
+        <p class="text-muted" style="font-size: 0.85rem; margin-top: 0.5rem;">Across 90-day time window</p>
+    </div>
+    <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
+        <h3 class="text-muted" style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em;">Active Detections Flagged</h3>
+        <div class="stat-value text-danger" style="font-size: 3rem;">{{ total_findings }}</div>
+        <p class="text-muted" style="font-size: 0.85rem; margin-top: 0.5rem;">Avg Algorithm Confidence: {{ avg_confidence }}%</p>
+    </div>
+    <div class="card" style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
+        <h3 class="text-muted" style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; align-self: flex-start; width: 100%;">Sector Telemetry Split</h3>
+        <div style="width: 100%; height: 130px; position: relative;">
+            <canvas id="sectorChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Analyst Table 1: Technical Entity Overview -->
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <div>
+            <h2 style="margin-bottom: 0.2rem;">Technical Entity Breakdown</h2>
+            <p class="text-muted" style="font-size: 0.9rem;">Granular telemetry and anomaly counts by organizational unit.</p>
+        </div>
+        <div>
+            <input type="text" id="searchInput" placeholder="Search by entity name or ID..." style="background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); padding: 8px 16px; border-radius: 6px; color: white; outline: none; font-family: 'Inter'; width: 280px;">
+        </div>
+    </div>
+    
+    <div style="overflow-x: auto;">
+        <table id="entityTable">
+            <thead>
+                <tr>
+                    <th>Entity Identifier</th>
+                    <th>Sector / Tier</th>
+                    <th>Total Violations</th>
+                    <th>Crit / High / Med</th>
+                    <th style="text-align: right;">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for e in entities %}
+                <tr class="entity-row">
+                    <td>
+                        <strong class="entity-name" style="font-family: 'Outfit'; color: #fff;">{{ e.name }}</strong><br>
+                        <small class="text-muted" style="font-family: monospace; font-size: 0.75rem;">UUID: {{ e.entity_id }}</small>
+                    </td>
+                    <td class="entity-sector">
+                        <span style="color: #cbd5e1;">{{ e.sector }}</span> <small class="text-muted">({{ e.size_tier }})</small>
+                    </td>
+                    <td>
+                        <span style="font-family: monospace; font-size: 0.95rem; font-weight: 700; color: #fff;">
+                            {{ e.findings_count }}
+                        </span>
+                    </td>
+                    <td>
+                        <span style="color: var(--accent-danger); font-family: monospace;">{{ e.critical_count }}C</span> &bull;
+                        <span style="color: var(--accent-warning); font-family: monospace;">{{ e.high_count }}H</span> &bull;
+                        <span style="color: #94a3b8; font-family: monospace;">{{ e.medium_count }}M</span>
+                    </td>
+                    <td style="text-align: right;">
+                        <a href="/entity/{{ e.entity_id }}" class="btn" style="padding: 6px 12px; font-size: 0.8rem;">Entity Dossier &rarr;</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Analyst Table 2: High-Density Technical Stream -->
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.2rem;">
+        <div>
+            <h2 style="margin-bottom: 0.2rem;">Technical Finding Audit Stream</h2>
+            <p class="text-muted" style="font-size: 0.9rem;">Real-time stream of detected rule violations with raw telemetry refs.</p>
+        </div>
+        <a href="/raw_anomalies?view=analyst" class="text-muted" style="font-size: 0.85rem; text-decoration: none; color: var(--accent-blue);">All Raw Anomalies &rarr;</a>
+    </div>
+
+    <div style="overflow-x: auto; max-height: 480px;">
+        <table>
+            <thead>
+                <tr>
+                    <th>Entity</th>
+                    <th>Technical Rule Identifier</th>
+                    <th>Score / Tier</th>
+                    <th>Confidence</th>
+                    <th>Alert Ref</th>
+                    <th>Case Ref</th>
+                    <th style="text-align: right; min-width: 170px;">Telemetry Chain</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for f in analyst_findings %}
+                <tr>
+                    <td><strong style="color: #fff; font-size: 0.85rem;">{{ f.entity_name }}</strong></td>
+                    <td>
+                        <span style="font-family: 'Consolas', monospace; color: var(--accent-purple); font-size: 0.85rem;">
+                            {{ f.rule_triggered }}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="badge {% if f.severity_score >= 9 %}badge-critical{% elif f.severity_score >= 7 %}badge-high{% else %}badge-medium{% endif %}" style="font-size: 0.75rem; padding: 3px 8px;">
+                            {{ f.severity_score }}/10
+                        </span>
+                    </td>
+                    <td>
+                        <span style="font-family: monospace; color: var(--accent-blue); font-size: 0.85rem; font-weight: 600;">
+                            {{ (f.confidence * 100) | round(0) | int }}%
+                        </span>
+                    </td>
+                    <td style="font-family: monospace; font-size: 0.8rem; color: var(--text-secondary);">
+                        {{ f.alert_id[:8] if f.alert_id else 'N/A' }}
+                    </td>
+                    <td style="font-family: monospace; font-size: 0.8rem; color: var(--text-secondary);">
+                        {{ f.case_id[:8] if f.case_id else 'N/A' }}
+                    </td>
+                    <td style="text-align: right; white-space: nowrap;">
+                        <a href="/finding/{{ f.entity_id }}/{{ f.finding_idx }}" class="btn" style="padding: 4px 8px; font-size: 0.75rem; margin-right: 4px;">Dossier</a>
+                        <a href="/finding/{{ f.entity_id }}/{{ f.finding_idx }}/trace" class="btn" style="padding: 4px 8px; font-size: 0.75rem; background: rgba(0, 240, 255, 0.1); border-color: rgba(0, 240, 255, 0.3); color: var(--accent-blue);">Trace 🔍</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<script>
+    // Search functionality for entity table
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.addEventListener('keyup', function() {
+            let filter = this.value.toLowerCase();
+            let rows = document.querySelectorAll('.entity-row');
+            
+            rows.forEach(row => {
+                let name = row.querySelector('.entity-name').textContent.toLowerCase();
+                let sector = row.querySelector('.entity-sector').textContent.toLowerCase();
+                
+                if (name.includes(filter) || sector.includes(filter)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+    }
+
+    // Sector breakdown chart
+    fetch('/api/sector_stats')
+        .then(response => response.json())
+        .then(data => {
+            const ctx = document.getElementById('sectorChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(data),
+                    datasets: [{
+                        data: Object.values(data),
+                        backgroundColor: ['#00f0ff', '#8b5cf6', '#ff0055', '#f59e0b', '#10b981'],
+                        borderWidth: 2,
+                        borderColor: '#060913'
+                    }]
+                },
+                options: {
+                    cutout: '70%',
+                    plugins: {
+                        legend: { 
+                            display: true,
+                            position: 'right',
+                            labels: {
+                                color: '#94a3b8',
+                                font: { family: 'Inter', size: 10 },
+                                boxWidth: 10
+                            }
+                        }
+                    },
+                    maintainAspectRatio: false
+                }
+            });
+        });
+</script>
+{% endblock %}

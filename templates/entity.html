@@ -1,0 +1,269 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-header" style="display: flex; justify-content: space-between; align-items: flex-end;">
+    <div>
+        <a href="/" class="text-muted" style="text-decoration: none; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 4px;">
+            <svg style="width: 14px; height: 14px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+            Back to Command Center
+        </a>
+        <h1 class="text-gradient" style="font-size: 2.2rem; margin-top: 0.5rem; margin-bottom: 0;">{{ entity.entity_name }}</h1>
+        <p class="text-muted" style="font-size: 1rem; margin-top: 0.2rem;">
+            Entity ID: <span style="font-family: monospace; color: var(--accent-blue);">{{ entity.entity_id }}</span> | 
+            Sector: <span style="color: white;">{{ entity.sector }}</span>
+        </p>
+    </div>
+    <div style="display: flex; gap: 10px; align-items: center;">
+        <a href="/export/{{ entity.entity_id }}/pdf" class="btn" style="display: flex; align-items: center; gap: 8px; background: linear-gradient(135deg, rgba(255, 0, 85, 0.25), rgba(112, 0, 255, 0.35)); border-color: rgba(255, 0, 85, 0.45); color: #fff;">
+            <svg style="width: 16px; height: 16px; color: var(--accent-danger);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+            Executive Summary (.pdf)
+        </a>
+        <a href="/export/{{ entity.entity_id }}" class="btn" style="display: flex; align-items: center; gap: 8px;">
+            <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+            Export Compliance (.csv)
+        </a>
+    </div>
+</div>
+
+<div class="grid-3">
+    <div class="card" style="grid-column: span 2;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.2rem; flex-wrap: wrap; gap: 10px;">
+            <div>
+                <h3 style="font-size: 1.1rem; margin-bottom: 0.2rem;">Operational Performance Trends (Weekly Buckets)</h3>
+                <p class="text-muted" style="font-size: 0.85rem;">Temporal evaluation of resolution velocity (MTTC), escalation discipline, and finding velocity.</p>
+            </div>
+            <div class="chart-pill-group" id="trendPillGroup">
+                <button class="chart-pill active" onclick="switchTrendMetric('all')">All Metrics</button>
+                <button class="chart-pill" onclick="switchTrendMetric('findings')">Findings</button>
+                <button class="chart-pill" onclick="switchTrendMetric('mttc')">MTTC (Mins)</button>
+                <button class="chart-pill" onclick="switchTrendMetric('esc')">Escalation %</button>
+            </div>
+        </div>
+        <div style="height: 280px; width: 100%;">
+            <canvas id="trendChart"></canvas>
+        </div>
+    </div>
+    <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
+        <div>
+            <h3 class="text-muted" style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">Entity Threat Profile</h3>
+            <div style="font-size: 2.5rem; font-weight: 700; color: var(--accent-danger); font-family: 'Outfit';">
+                {{ findings|length }}
+            </div>
+            <div class="text-muted" style="font-size: 0.85rem;">Supervisory Policy Violations</div>
+        </div>
+        
+        <div style="margin: 1.2rem 0; padding: 1rem 0; border-top: 1px solid var(--glass-border); border-bottom: 1px solid var(--glass-border);">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.6rem; font-size: 0.85rem;">
+                <span class="text-muted">Avg Weekly MTTC:</span>
+                <span style="font-family: monospace; color: var(--accent-blue); font-weight: 600;">
+                    {% if trend_metrics.mttc %}{{ (trend_metrics.mttc | sum / trend_metrics.mttc|length) | round(1) }} mins{% else %}N/A{% endif %}
+                </span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.6rem; font-size: 0.85rem;">
+                <span class="text-muted">Avg Escalation Rate:</span>
+                <span style="font-family: monospace; color: var(--accent-purple); font-weight: 600;">
+                    {% if trend_metrics.escalation_rate %}{{ (trend_metrics.escalation_rate | sum / trend_metrics.escalation_rate|length) | round(1) }}%{% else %}N/A{% endif %}
+                </span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.85rem;">
+                <span class="text-muted">Audit Period:</span>
+                <span style="color: #fff; font-size: 0.85rem;">90 Days ({{ trend_metrics.labels|length }} Weeks)</span>
+            </div>
+        </div>
+        
+        <div class="badge badge-critical" style="text-align: center; display: block; padding: 8px;">
+            Supervisory Action Required
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 1.5rem;">
+        <div>
+            <h2>Supervisory Findings Dossier</h2>
+            <p class="text-muted">Comprehensive findings log with automated evidence, plain-language narratives, and alert traceability.</p>
+        </div>
+    </div>
+    
+    <div style="overflow-x: auto;">
+        <table>
+            <thead>
+                <tr>
+                    <th>Rule Triggered &amp; Narrative</th>
+                    <th>Severity (Score)</th>
+                    <th>Confidence</th>
+                    <th>Explanation Context</th>
+                    <th style="text-align: right; min-width: 180px;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for f in findings %}
+                <tr>
+                    <td style="max-width: 290px;">
+                        <span style="font-family: 'Consolas', monospace; color: var(--accent-purple); font-weight: 600;">
+                            {{ f.rule_triggered }}
+                        </span>
+                        <div style="color: #94a3b8; font-size: 0.8rem; margin-top: 5px; line-height: 1.4;">
+                            {{ f.plain_english_summary if f.plain_english_summary else f.explanation }}
+                        </div>
+                    </td>
+                    <td style="white-space: nowrap;">
+                        <span class="badge {% if f.severity_of_finding == 'Critical' %}badge-critical{% elif f.severity_of_finding == 'High' %}badge-high{% else %}badge-medium{% endif %}">
+                            {{ f.severity_of_finding }} ({{ f.severity_score }}/10)
+                        </span>
+                    </td>
+                    <td>
+                        <span style="font-family: monospace; color: var(--accent-blue); font-weight: 600;">
+                            {{ (f.confidence * 100) | round(0) | int }}%
+                        </span>
+                    </td>
+                    <td><small style="color: #cbd5e1; font-size: 0.85rem;">{{ f.explanation }}</small></td>
+                    <td style="text-align: right; white-space: nowrap;">
+                        <a href="/finding/{{ entity.entity_id }}/{{ loop.index0 }}" class="btn" style="padding: 6px 10px; font-size: 0.8rem; margin-right: 4px;">Dossier</a>
+                        <a href="/finding/{{ entity.entity_id }}/{{ loop.index0 }}/trace" class="btn" style="padding: 6px 10px; font-size: 0.8rem; background: rgba(0, 240, 255, 0.1); border-color: rgba(0, 240, 255, 0.3); color: var(--accent-blue);">Trace Chain &rarr;</a>
+                    </td>
+                </tr>
+                {% endfor %}
+                {% if not findings %}
+                <tr><td colspan="5" class="text-muted" style="text-align: center; padding: 3rem;">No anomalies detected for this entity.</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    const metricsData = JSON.parse('{{ trend_metrics_json | safe }}');
+    const ctx = document.getElementById('trendChart').getContext('2d');
+    
+    // Define datasets
+    const dsFindings = {
+        label: 'Findings Flagged',
+        data: metricsData.findings_count,
+        type: 'bar',
+        backgroundColor: 'rgba(255, 0, 85, 0.65)',
+        borderColor: '#ff0055',
+        borderWidth: 1,
+        borderRadius: 4,
+        yAxisID: 'yLeft',
+        order: 2
+    };
+
+    const dsMTTC = {
+        label: 'MTTC (Minutes)',
+        data: metricsData.mttc,
+        type: 'line',
+        borderColor: '#00f0ff',
+        backgroundColor: 'rgba(0, 240, 255, 0.1)',
+        borderWidth: 2,
+        tension: 0.3,
+        pointRadius: 3,
+        pointHoverRadius: 6,
+        yAxisID: 'yLeft',
+        order: 1
+    };
+
+    const dsEsc = {
+        label: 'Escalation Rate (%)',
+        data: metricsData.escalation_rate,
+        type: 'line',
+        borderColor: '#8b5cf6',
+        backgroundColor: 'rgba(139, 92, 246, 0.1)',
+        borderWidth: 2,
+        borderDash: [4, 4],
+        tension: 0.3,
+        pointRadius: 3,
+        pointHoverRadius: 6,
+        yAxisID: 'yRight',
+        order: 0
+    };
+
+    let currentChart = new Chart(ctx, {
+        data: {
+            labels: metricsData.labels,
+            datasets: [dsFindings, dsMTTC, dsEsc]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { intersect: false, mode: 'index' },
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top',
+                    labels: {
+                        color: '#94a3b8',
+                        font: { family: 'Inter', size: 11 },
+                        boxWidth: 12
+                    }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(6, 9, 19, 0.95)',
+                    titleColor: '#fff',
+                    bodyColor: '#cbd5e1',
+                    borderColor: 'rgba(255,255,255,0.1)',
+                    borderWidth: 1,
+                    padding: 10
+                }
+            },
+            scales: {
+                x: {
+                    grid: { color: 'rgba(255, 255, 255, 0.03)' },
+                    ticks: { color: '#94a3b8', font: { family: 'Inter', size: 10 } }
+                },
+                yLeft: {
+                    type: 'linear',
+                    position: 'left',
+                    beginAtZero: true,
+                    grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                    ticks: { color: '#94a3b8', font: { family: 'Inter', size: 10 } },
+                    title: { display: true, text: 'Findings / Minutes', color: '#94a3b8', font: { size: 10 } }
+                },
+                yRight: {
+                    type: 'linear',
+                    position: 'right',
+                    beginAtZero: true,
+                    max: 100,
+                    grid: { drawOnChartArea: false },
+                    ticks: { 
+                        color: '#8b5cf6', 
+                        font: { family: 'Inter', size: 10 },
+                        callback: function(v) { return v + '%'; }
+                    },
+                    title: { display: true, text: 'Escalation %', color: '#8b5cf6', font: { size: 10 } }
+                }
+            }
+        }
+    });
+
+    function switchTrendMetric(mode) {
+        // Update pill styling
+        const pills = document.querySelectorAll('#trendPillGroup .chart-pill');
+        pills.forEach(p => p.classList.remove('active'));
+        if (event && event.target) {
+            event.target.classList.add('active');
+        }
+
+        if (mode === 'all') {
+            currentChart.data.datasets = [dsFindings, dsMTTC, dsEsc];
+            currentChart.options.scales.yRight.display = true;
+            currentChart.options.scales.yLeft.title.text = 'Findings / Minutes';
+        } else if (mode === 'findings') {
+            currentChart.data.datasets = [dsFindings];
+            currentChart.options.scales.yRight.display = false;
+            currentChart.options.scales.yLeft.title.text = 'Finding Count';
+        } else if (mode === 'mttc') {
+            currentChart.data.datasets = [dsMTTC];
+            currentChart.options.scales.yRight.display = false;
+            currentChart.options.scales.yLeft.title.text = 'Mean Time to Close (Minutes)';
+        } else if (mode === 'esc') {
+            const singleEsc = Object.assign({}, dsEsc, { yAxisID: 'yLeft' });
+            currentChart.data.datasets = [singleEsc];
+            currentChart.options.scales.yRight.display = false;
+            currentChart.options.scales.yLeft.title.text = 'Escalation Rate (%)';
+            currentChart.options.scales.yLeft.max = 100;
+        }
+        currentChart.update();
+    }
+</script>
+{% endblock %}

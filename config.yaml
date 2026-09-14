@@ -1,0 +1,135 @@
+# ==============================================================================
+# SAT-SA CONFIGURATION — All operational thresholds, weights, and tuning params
+# ==============================================================================
+# This is the single source of truth for every numeric constant in the pipeline.
+# Modify values here to tune the detection engine. Do NOT hardcode values in
+# detection_engine.py — reference this config instead.
+
+# ------------------------------------------------------------------------------
+# RULE SEVERITY WEIGHTS (Scale 1-10)
+# Higher scores = greater operational/security/compliance risk.
+# ------------------------------------------------------------------------------
+severity_weights:
+  critical_no_escalation: 10           # Critical threat uncontained; Tier 1 bypass of mandatory escalation
+  missing_telemetry: 9                 # Complete visibility blackout on critical crown-jewel infrastructure
+  root_cause_missing_on_critical: 8    # Critical incident closed without RCA, leaving root exposure unaddressed
+  fast_closure_no_investigation: 8     # Rubber-stamping dismissal of High/Critical alerts without triage
+  peer_benchmark_escalation_outlier: 7 # Systematic organizational failure to escalate severe incidents (>2 std)
+  peer_benchmark_mttc_outlier: 6       # Prolonged attacker dwell time and severe remediation latency (>2 std)
+  stale_open_case: 5                   # SLA breach and stalled investigation on unresolved incidents (>30 days)
+  statistical_anomaly_isolation_forest: 5  # Multi-dimensional operational anomaly flagged by ensemble model
+  templated_investigation: 4           # Boilerplate notes indicating low-effort analyst compliance
+
+# ------------------------------------------------------------------------------
+# SEVERITY TIER THRESHOLDS (score -> tier label)
+# ------------------------------------------------------------------------------
+severity_tiers:
+  critical_min: 9    # score >= 9 -> "Critical"
+  high_min: 7        # score >= 7 -> "High"
+  medium_min: 4      # score >= 4 -> "Medium"
+                     # score  < 4 -> "Low"
+
+# ------------------------------------------------------------------------------
+# LAYER A — RECORD-LEVEL RULE THRESHOLDS
+# ------------------------------------------------------------------------------
+
+# Rule: fast_closure_no_investigation
+# NIST SP 800-61 / SANS: minimum 3-5 min to triage High/Critical alerts.
+fast_closure:
+  max_investigation_seconds: 180     # Closures under 3 min are flagged
+  max_notes_words: 5                 # Fewer than 5 words = rubber-stamp note
+  # Confidence formula: 0.60 + 0.30*time_factor + 0.05*notes_factor + sev_bonus
+  conf_base: 0.60
+  conf_time_weight: 0.30
+  conf_notes_weight: 0.05
+  conf_critical_bonus: 0.04
+  conf_min: 0.50
+  conf_max: 0.99
+
+# Rule: critical_no_escalation
+# SOC SOP: Tier 1 analysts cannot close Critical alerts without Tier 2/IR escalation.
+critical_no_escalation:
+  conf_base: 0.85
+  conf_confirmed_disposition_boost: 0.10   # +boost if closure_reason is "True Positive" or "Resolved"
+  conf_missing_rca_boost: 0.03             # +boost if root_cause_documented == "No"
+  conf_max: 0.99
+
+# Rule: templated_investigation
+# Boilerplate investigation detection via TF-IDF cosine similarity.
+templated_investigation:
+  min_notes_word_count: 5          # Notes with fewer words are rubber-stamps, not templates
+  similarity_threshold: 0.90       # Pairs with cosine similarity > 0.90 are flagged
+  # Confidence: 0.70 + 0.28 * sim_margin (where margin = (sim - 0.90) / 0.10)
+  conf_base: 0.70
+  conf_sim_weight: 0.28
+  conf_sim_scale: 0.10             # Denominator for margin normalization above threshold
+  conf_min: 0.60
+  conf_max: 0.99
+
+# Rule: missing_telemetry
+# MITRE ATT&CK: Critical crown-jewel assets must maintain continuous logging coverage.
+missing_telemetry:
+  peer_mean_fallback: 20.0         # Used when no peers have non-zero alert counts
+  # Confidence: 0.88 + 0.11 * (1 - exp(-peer_mean / peer_mean_fallback))
+  conf_base: 0.88
+  conf_peer_weight: 0.11
+  conf_min: 0.85
+  conf_max: 0.99
+
+# Rule: stale_open_case
+# ITIL: Cases unclosed for >30 days represent abandoned investigations.
+stale_open_case:
+  max_days_open: 30                # Cases open longer than this are flagged
+  # Confidence: 0.65 + 0.34 * (1 - exp(-excess_days / decay_constant))
+  conf_base: 0.65
+  conf_excess_weight: 0.34
+  conf_decay_constant: 20.0        # Controls exponential decay rate
+  conf_min: 0.65
+  conf_max: 0.99
+
+# Rule: root_cause_missing_on_critical
+# NIST SP 800-61 Rev 2: Mandatory RCA for Critical incidents.
+root_cause_missing:
+  max_notes_words_for_boost: 5     # Minimal notes also boost confidence
+  conf_base: 0.80
+  conf_confirmed_closure_boost: 0.15  # +boost if closure_reason is "Resolved" or "True Positive"
+  conf_short_notes_boost: 0.03        # +boost if notes_length < max_notes_words_for_boost
+  conf_max: 0.99
+
+# ------------------------------------------------------------------------------
+# LAYER B — STATISTICAL & POPULATION BENCHMARK RULE THRESHOLDS
+# ------------------------------------------------------------------------------
+
+# Z-score thresholds and IsolationForest tuning
+layer_b:
+  zscore_threshold: 2.0              # Z > 2.0 triggers peer_benchmark_mttc_outlier
+  zscore_threshold_neg: -2.0         # Z < -2.0 triggers peer_benchmark_escalation_outlier
+  elevated_signal_zscore: 1.0        # |Z| > 1.0 counts as a corroborating elevated signal
+
+  # IsolationForest configuration
+  isolation_forest_contamination: 0.1    # Expected fraction of anomalous entities (10%)
+  isolation_forest_random_state: 42      # Reproducibility seed
+
+  # peer_benchmark_mttc_outlier confidence
+  # conf = max(0.70, 0.70 + 0.24 * min(1.0, z_excess/2.0) + iso_corroboration)
+  mttc_conf_base: 0.70
+  mttc_conf_z_weight: 0.24
+  mttc_conf_z_scale: 2.0
+  mttc_conf_iso_boost: 0.05          # +boost if isolation forest also flags the entity
+  mttc_conf_min: 0.70
+  mttc_conf_max: 0.99
+
+  # peer_benchmark_escalation_outlier confidence (same formula as mttc)
+  esc_conf_base: 0.70
+  esc_conf_z_weight: 0.24
+  esc_conf_z_scale: 2.0
+  esc_conf_iso_boost: 0.05
+  esc_conf_min: 0.70
+  esc_conf_max: 0.99
+
+  # statistical_anomaly_isolation_forest confidence
+  # conf = max(0.55, min(0.85, 0.60 + 0.08 * n_elevated_signals))
+  iso_only_conf_base: 0.60
+  iso_only_conf_signal_weight: 0.08
+  iso_only_conf_min: 0.55
+  iso_only_conf_max: 0.85

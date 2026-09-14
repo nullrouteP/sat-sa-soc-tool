@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <a href="/entity/{{ entity.entity_id }}" class="text-muted" style="text-decoration: none; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 4px;">
+            <svg style="width: 14px; height: 14px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+            Back to {{ entity.entity_name }}
+        </a>
+        <h1 class="text-gradient" style="font-size: 2.2rem; margin-top: 0.5rem; margin-bottom: 0;">Evidence Dossier #{{ index + 1 }}</h1>
+        <p class="text-muted" style="font-size: 1rem; margin-top: 0.2rem;">
+            Supervisory Review for: <span style="color: white;">{{ entity.entity_name }}</span>
+        </p>
+    </div>
+</div>
+
+<div class="dossier-grid">
+    <!-- Left Column: Explanation -->
+    <div>
+        <div class="card" style="margin-bottom: 2rem;">
+            <h3 class="text-muted" style="font-size: 1rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">Policy Violation</h3>
+            <h2 style="font-family: 'Consolas', monospace; color: var(--accent-purple); font-size: 1.5rem; word-break: break-all;">
+                {{ finding.rule_triggered }}
+            </h2>
+            
+            <div style="margin: 1.5rem 0; display: flex; gap: 1.5rem; align-items: center; flex-wrap: wrap;">
+                <div>
+                    <span class="text-muted" style="margin-right: 0.5rem; font-size: 0.9rem;">Assessed Severity:</span>
+                    <span class="badge {% if finding.severity_of_finding == 'Critical' %}badge-critical{% elif finding.severity_of_finding == 'High' %}badge-high{% else %}badge-medium{% endif %}" style="font-size: 0.85rem; padding: 6px 16px;">
+                        {{ finding.severity_of_finding }} (Score: {{ finding.severity_score }}/10)
+                    </span>
+                </div>
+                <div>
+                    <span class="text-muted" style="margin-right: 0.5rem; font-size: 0.9rem;">Confidence:</span>
+                    <span class="badge badge-medium" style="font-size: 0.85rem; padding: 6px 16px; border-color: var(--accent-blue); color: var(--accent-blue);">
+                        {{ (finding.confidence * 100) | round(0) | int }}%
+                    </span>
+                </div>
+            </div>
+            
+            <div style="background: rgba(0, 240, 255, 0.05); border-left: 4px solid var(--accent-blue); padding: 1.5rem; border-radius: 0 8px 8px 0; margin-top: 1.5rem;">
+                <h4 style="color: var(--accent-blue); margin-bottom: 0.4rem; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em;">Plain-Language Executive Summary</h4>
+                <p style="font-size: 1.05rem; line-height: 1.6; color: white; margin-bottom: 1rem;">
+                    {{ finding.plain_english_summary if finding.plain_english_summary else finding.explanation }}
+                </p>
+                <h4 style="color: var(--text-secondary); margin-bottom: 0.3rem; text-transform: uppercase; font-size: 0.7rem; letter-spacing: 0.05em;">Technical SOC Context</h4>
+                <p style="font-size: 0.9rem; color: #94a3b8; line-height: 1.5; margin: 0;">
+                    {{ finding.explanation }}
+                </p>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h3 class="text-muted" style="font-size: 1rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 1rem;">Linked References</h3>
+            <table style="margin-top: 0;">
+                <tbody>
+                    <tr>
+                        <td style="color: var(--text-secondary); width: 100px;">Alert ID</td>
+                        <td style="font-family: monospace; color: var(--accent-blue);">{{ finding.alert_id if finding.alert_id else 'N/A' }}</td>
+                    </tr>
+                    <tr>
+                        <td style="color: var(--text-secondary);">Case ID</td>
+                        <td style="font-family: monospace; color: var(--accent-purple);">{{ finding.case_id if finding.case_id else 'N/A' }}</td>
+                    </tr>
+                </tbody>
+            </table>
+            <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--glass-border);">
+                <a href="/finding/{{ entity.entity_id }}/{{ index }}/trace" class="btn" style="width: 100%; text-align: center; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+                    View Alert Traceability Chain &rarr;
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Right Column: Evidence -->
+    <div>
+        <div class="card" style="height: 100%; display: flex; flex-direction: column;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h3 class="text-muted" style="font-size: 1rem; text-transform: uppercase; letter-spacing: 0.05em; margin: 0;">Telemetry Payload</h3>
+                <span class="badge" style="background: rgba(16, 185, 129, 0.1); color: var(--accent-success); border: 1px solid rgba(16, 185, 129, 0.3);">Verified</span>
+            </div>
+            <p class="text-muted" style="font-size: 0.9rem; margin-bottom: 1.5rem;">The underlying data points that triggered the SAT-SA detection engine.</p>
+            
+            <div class="evidence-box" style="flex-grow: 1;">
+<pre style="white-space: pre-wrap; margin: 0; line-height: 1.5;">{{ finding.evidence | tojson(indent=4) }}</pre>
+            </div>
+            
+            <div style="margin-top: 1.5rem; font-size: 0.8rem; color: var(--text-secondary); display: flex; gap: 8px;">
+                <svg style="width: 16px; height: 16px; color: var(--accent-warning); flex-shrink: 0;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                This evidence is immutable and algorithmically extracted from raw SOC records.
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

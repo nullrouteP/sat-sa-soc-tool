@@ -1,0 +1,232 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <a href="/finding/{{ entity.entity_id }}/{{ index }}" class="text-muted" style="text-decoration: none; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 4px;">
+            <svg style="width: 14px; height: 14px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+            Back to Evidence Dossier #{{ index + 1 }}
+        </a>
+        <h1 class="text-gradient" style="font-size: 2.3rem; margin-top: 0.5rem; margin-bottom: 0;">Alert-to-Finding Traceability Chain</h1>
+        <p class="text-muted" style="font-size: 1rem; margin-top: 0.2rem;">
+            End-to-end supervisory audit trail for: <span style="color: white; font-weight: 600;">{{ entity.entity_name }}</span> ({{ entity.sector }})
+        </p>
+    </div>
+    <div>
+        <span class="badge {% if finding.severity_score >= 9 %}badge-critical{% elif finding.severity_score >= 7 %}badge-high{% else %}badge-medium{% endif %}" style="font-size: 0.95rem; padding: 8px 18px;">
+            Severity {{ finding.severity_score }}/10 &bull; {{ (finding.confidence * 100) | round(0) | int }}% Confidence
+        </span>
+    </div>
+</div>
+
+<div class="trace-timeline">
+    <!-- STAGE 1: RAW ALERT INGESTION -->
+    <div class="trace-step">
+        <div class="trace-step-node">1</div>
+        <div class="trace-step-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <div>
+                    <span class="text-muted" style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em;">Stage 1 &bull; Ingestion Telemetry</span>
+                    <h3 style="color: var(--accent-blue); margin-top: 0.2rem;">Raw Security Alert Ingested</h3>
+                </div>
+                <span class="badge badge-medium" style="font-size: 0.8rem;">
+                    {% if alert %}Source: {{ alert.source_system }}{% else %}Entity-Level Event{% endif %}
+                </span>
+            </div>
+
+            {% if alert %}
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; margin-bottom: 1rem;">
+                <div>
+                    <small class="text-muted" style="display: block;">Alert ID</small>
+                    <span style="font-family: monospace; font-size: 0.85rem; color: #fff;">{{ alert.alert_id }}</span>
+                </div>
+                <div>
+                    <small class="text-muted" style="display: block;">Asset ID</small>
+                    <span style="font-family: monospace; font-size: 0.85rem; color: #fff;">{{ alert.asset_id }}</span>
+                </div>
+                <div>
+                    <small class="text-muted" style="display: block;">Reported Severity</small>
+                    <span class="badge {% if alert.severity == 'Critical' %}badge-critical{% elif alert.severity == 'High' %}badge-high{% else %}badge-medium{% endif %}" style="font-size: 0.75rem; padding: 4px 10px;">
+                        {{ alert.severity }}
+                    </span>
+                </div>
+                <div>
+                    <small class="text-muted" style="display: block;">Category</small>
+                    <span style="color: #fff; font-size: 0.9rem;">{{ alert.alert_category }}</span>
+                </div>
+            </div>
+            <div style="background: rgba(0,0,0,0.3); padding: 0.8rem 1rem; border-radius: 8px; font-size: 0.85rem; color: var(--text-secondary); display: flex; gap: 2rem;">
+                <div><strong>Ingest Timestamp:</strong> <span style="color: #e2e8f0; font-family: monospace;">{{ alert.timestamp }}</span></div>
+                <div><strong>Initial Acknowledged:</strong> <span style="color: #e2e8f0; font-family: monospace;">{{ alert.acknowledged_at if alert.acknowledged_at else 'Unacknowledged' }}</span></div>
+            </div>
+            {% else %}
+            <p class="text-muted" style="font-size: 0.95rem; margin-bottom: 0.5rem;">
+                This finding stems from entity-wide cross-asset benchmark aggregation rather than an isolated individual alert.
+            </p>
+            <div style="background: rgba(0,0,0,0.3); padding: 0.8rem 1rem; border-radius: 8px; font-size: 0.85rem; color: var(--text-secondary);">
+                <strong>Entity Scope:</strong> {{ entity.entity_name }} &bull; Sector: {{ entity.sector }} &bull; Observed Window: 90 Days
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- STAGE 2: CASE CREATION & WORKFLOW -->
+    <div class="trace-step">
+        <div class="trace-step-node">2</div>
+        <div class="trace-step-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <div>
+                    <span class="text-muted" style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em;">Stage 2 &bull; Case Lifecycle</span>
+                    <h3 style="color: var(--accent-purple); margin-top: 0.2rem;">SOC Case Management Record</h3>
+                </div>
+                <span class="badge" style="background: rgba(139, 92, 246, 0.15); color: var(--accent-purple); border: 1px solid rgba(139, 92, 246, 0.3);">
+                    {% if case %}Case {{ case.case_id[:8] }}{% else %}Benchmark Context{% endif %}
+                </span>
+            </div>
+
+            {% if case %}
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; margin-bottom: 1rem;">
+                <div>
+                    <small class="text-muted" style="display: block;">Case ID</small>
+                    <span style="font-family: monospace; font-size: 0.85rem; color: #fff;">{{ case.case_id }}</span>
+                </div>
+                <div>
+                    <small class="text-muted" style="display: block;">Escalation Status</small>
+                    <span style="color: {% if case.escalated == 'Yes' %}var(--accent-success){% else %}var(--accent-danger){% endif %}; font-weight: 600;">
+                        {{ case.escalated }} (Level: {{ case.escalation_level }})
+                    </span>
+                </div>
+                <div>
+                    <small class="text-muted" style="display: block;">Root Cause Documented</small>
+                    <span style="color: {% if case.root_cause_documented == 'Yes' %}var(--accent-success){% else %}var(--accent-danger){% endif %}; font-weight: 600;">
+                        {{ case.root_cause_documented }}
+                    </span>
+                </div>
+                <div>
+                    <small class="text-muted" style="display: block;">Closure Reason</small>
+                    <span style="color: #fff; font-size: 0.9rem;">{{ alert.closure_reason if alert and alert.closure_reason else 'None / Incomplete' }}</span>
+                </div>
+            </div>
+            <div style="background: rgba(0,0,0,0.3); padding: 0.8rem 1rem; border-radius: 8px; font-size: 0.85rem; color: var(--text-secondary); display: flex; gap: 2rem;">
+                <div><strong>Opened At:</strong> <span style="color: #e2e8f0; font-family: monospace;">{{ case.opened_at if case.opened_at else 'N/A' }}</span></div>
+                <div><strong>Closed At:</strong> <span style="color: #e2e8f0; font-family: monospace;">{{ case.closed_at if case.closed_at else 'Still Open / Stale' }}</span></div>
+                {% if case.escalated_at %}
+                <div><strong>Escalated At:</strong> <span style="color: #e2e8f0; font-family: monospace;">{{ case.escalated_at }}</span></div>
+                {% endif %}
+            </div>
+            {% else %}
+            <p class="text-muted" style="font-size: 0.95rem;">
+                Aggregate population-level metric computation evaluated across all cases associated with {{ entity.entity_name }}.
+            </p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- STAGE 3: INVESTIGATOR ACTIONS & NOTES -->
+    <div class="trace-step">
+        <div class="trace-step-node">3</div>
+        <div class="trace-step-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <div>
+                    <span class="text-muted" style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em;">Stage 3 &bull; Human Analyst Activity</span>
+                    <h3 style="color: #38bdf8; margin-top: 0.2rem;">Investigator Notes &amp; Documentation</h3>
+                </div>
+                {% if case and case.investigator_notes_length is defined %}
+                <span class="badge badge-medium">Length: {{ case.investigator_notes_length }} words</span>
+                {% endif %}
+            </div>
+
+            {% if case and case.investigator_notes %}
+            <div style="background: #02040a; border: 1px solid #1e293b; border-left: 4px solid #38bdf8; border-radius: 8px; padding: 1.2rem; margin-bottom: 1rem;">
+                <small class="text-muted" style="text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 0.4rem;">Verbatim Investigator Narrative:</small>
+                <p style="font-family: 'Consolas', monospace; color: #e2e8f0; font-size: 0.95rem; line-height: 1.6; margin: 0; white-space: pre-wrap;">{{ case.investigator_notes }}</p>
+            </div>
+            {% else %}
+            <div style="background: rgba(255, 0, 85, 0.08); border: 1px dashed rgba(255, 0, 85, 0.3); border-radius: 8px; padding: 1rem; color: var(--accent-danger); font-size: 0.9rem;">
+                <strong>Documentation Missing:</strong> No analyst narrative or investigation notes were entered for this record.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- STAGE 4: DETECTION RULE EXECUTION -->
+    <div class="trace-step">
+        <div class="trace-step-node">4</div>
+        <div class="trace-step-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <div>
+                    <span class="text-muted" style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em;">Stage 4 &bull; Engine Evaluation</span>
+                    <h3 style="color: var(--accent-warning); margin-top: 0.2rem;">Rule Evaluation &amp; Threshold Matching</h3>
+                </div>
+                <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: var(--accent-warning); border: 1px solid rgba(245, 158, 11, 0.3);">
+                    {{ rule_info.layer }}
+                </span>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                <div>
+                    <small class="text-muted" style="display: block;">Triggered Rule Identifier</small>
+                    <span style="font-family: 'Consolas', monospace; font-size: 1.05rem; color: var(--accent-purple); font-weight: 600;">
+                        {{ finding.rule_triggered }}
+                    </span>
+                    <small class="text-muted" style="display: block; margin-top: 0.5rem;">Governing Standard</small>
+                    <span style="color: #fff; font-size: 0.9rem;">{{ rule_info.policy }}</span>
+                </div>
+                <div>
+                    <small class="text-muted" style="display: block;">Evaluated Condition / Threshold</small>
+                    <div style="background: rgba(0,0,0,0.3); padding: 0.5rem 0.8rem; border-radius: 6px; font-family: monospace; font-size: 0.85rem; color: #e2e8f0; margin-top: 0.2rem;">
+                        {{ rule_info.threshold }}
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <small class="text-muted" style="display: block; margin-bottom: 0.5rem; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em;">Algorithmically Extracted Evidence Payload:</small>
+                <div class="evidence-box">
+<pre style="white-space: pre-wrap; margin: 0; line-height: 1.5;">{{ finding.evidence | tojson(indent=4) }}</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- STAGE 5: SUPERVISORY FINDING DOSSIER -->
+    <div class="trace-step">
+        <div class="trace-step-node" style="border-color: var(--accent-danger); color: var(--accent-danger);">5</div>
+        <div class="trace-step-card" style="border-color: rgba(255, 0, 85, 0.4); box-shadow: 0 0 20px rgba(255, 0, 85, 0.15);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <div>
+                    <span class="text-muted" style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent-danger);">Stage 5 &bull; Final Finding Assessment</span>
+                    <h3 style="color: #fff; margin-top: 0.2rem;">Supervisory Compliance Finding Generated</h3>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <span class="badge {% if finding.severity_score >= 9 %}badge-critical{% elif finding.severity_score >= 7 %}badge-high{% else %}badge-medium{% endif %}">
+                        Severity Score: {{ finding.severity_score }}/10
+                    </span>
+                    <span class="badge badge-medium" style="border-color: var(--accent-blue); color: var(--accent-blue);">
+                        Confidence: {{ (finding.confidence * 100) | round(0) | int }}%
+                    </span>
+                </div>
+            </div>
+
+            <div style="background: rgba(0, 240, 255, 0.05); border-left: 4px solid var(--accent-blue); padding: 1.2rem; border-radius: 0 8px 8px 0; margin-bottom: 1.5rem;">
+                <h4 style="color: var(--accent-blue); text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em; margin-bottom: 0.4rem;">Plain-Language Executive Summary</h4>
+                <p style="font-size: 1.05rem; color: #fff; line-height: 1.5; margin: 0 0 0.8rem 0;">
+                    {{ finding.plain_english_summary if finding.plain_english_summary else finding.explanation }}
+                </p>
+                <h4 style="color: var(--text-secondary); text-transform: uppercase; font-size: 0.7rem; letter-spacing: 0.05em; margin-bottom: 0.3rem;">Technical Assessment</h4>
+                <p style="font-size: 0.9rem; color: #94a3b8; line-height: 1.4; margin: 0;">{{ finding.explanation }}</p>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="font-size: 0.85rem; color: var(--text-secondary);">
+                    <strong>Risk Rationale:</strong> {{ rule_info.risk_rationale }}
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <a href="/finding/{{ entity.entity_id }}/{{ index }}" class="btn">&larr; Return to Dossier</a>
+                    <a href="/entity/{{ entity.entity_id }}" class="btn" style="background: rgba(255,255,255,0.05); border-color: var(--glass-border);">Entity Command Center</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

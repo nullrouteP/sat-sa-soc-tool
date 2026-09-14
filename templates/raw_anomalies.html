@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="text-gradient" style="font-size: 2.5rem; margin-bottom: 0.3rem;">Raw Anomalies Log</h1>
+        <p class="text-muted" style="font-size: 1.05rem;">Comprehensive supervisory register of all detected policy violations.</p>
+    </div>
+    <div class="view-switcher">
+        <a href="/raw_anomalies?view=manager" class="view-switcher-btn {% if view_mode == 'manager' %}active{% endif %}">
+            <svg style="width: 14px; height: 14px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+            Manager View
+        </a>
+        <a href="/raw_anomalies?view=analyst" class="view-switcher-btn {% if view_mode == 'analyst' %}active{% endif %}">
+            <svg style="width: 14px; height: 14px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"></path></svg>
+            Analyst View
+        </a>
+    </div>
+</div>
+
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 10px;">
+        <div>
+            <h2 style="margin-bottom: 0.2rem;">{% if view_mode == 'manager' %}Prioritized Executive Findings{% else %}Technical Detection Payload Stream{% endif %}</h2>
+            <p class="text-muted" style="font-size: 0.9rem;">Total records: {{ findings|length }}{% if view_mode == 'manager' %} &bull; Sorted by Severity Score (10 &rarr; 1){% endif %}</p>
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <select id="severityFilter" style="background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); padding: 8px 12px; border-radius: 6px; color: white; outline: none; font-family: 'Inter';">
+                <option value="">All Severities</option>
+                <option value="critical">Critical</option>
+                <option value="high">High</option>
+                <option value="medium">Medium</option>
+            </select>
+            <input type="text" id="logSearch" placeholder="Filter by rule or entity..." style="background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); padding: 8px 16px; border-radius: 6px; color: white; outline: none; font-family: 'Inter';">
+        </div>
+    </div>
+    
+    <div style="overflow-x: auto; max-height: 70vh;">
+        <table>
+            {% if view_mode == 'manager' %}
+            <thead>
+                <tr>
+                    <th>Target Entity</th>
+                    <th>Violation Category</th>
+                    <th>Assessed Severity</th>
+                    <th>Supervisory Summary</th>
+                    <th style="text-align: right;">Action</th>
+                </tr>
+            </thead>
+            <tbody id="logTableBody">
+                {% for f in findings %}
+                <tr class="log-row">
+                    <td>
+                        <strong class="log-entity" style="font-family: 'Outfit'; color: #fff;">{{ f.entity_name }}</strong>
+                    </td>
+                    <td>
+                        <span class="log-rule" style="font-family: 'Outfit'; color: var(--accent-purple); font-weight: 600;">
+                            {{ f.rule_triggered.replace('_', ' ').title() }}
+                        </span>
+                    </td>
+                    <td class="log-severity-cell">
+                        <span class="badge {% if f.severity_score >= 9 %}badge-critical{% elif f.severity_score >= 7 %}badge-high{% else %}badge-medium{% endif %}" data-severity="{{ f.severity_of_finding | lower }}">
+                            {{ f.severity_of_finding }} ({{ f.severity_score }}/10)
+                        </span>
+                    </td>
+                    <td>
+                        <small style="color: #cbd5e1; font-size: 0.85rem;">{{ f.explanation }}</small>
+                    </td>
+                    <td style="text-align: right;">
+                        <a href="/finding/{{ f.entity_id }}/{{ f.finding_idx }}" class="btn" style="padding: 5px 12px; font-size: 0.8rem;">Dossier</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            {% else %}
+            <thead>
+                <tr>
+                    <th>Entity</th>
+                    <th>Rule Triggered</th>
+                    <th>Severity (Score)</th>
+                    <th>Confidence</th>
+                    <th>Alert/Case Ref</th>
+                    <th style="text-align: right; min-width: 160px;">Traceability</th>
+                </tr>
+            </thead>
+            <tbody id="logTableBody">
+                {% for f in findings %}
+                <tr class="log-row">
+                    <td>
+                        <strong class="log-entity" style="font-family: 'Outfit'; color: #fff;">{{ f.entity_name }}</strong>
+                    </td>
+                    <td>
+                        <span class="log-rule" style="font-family: 'Consolas', monospace; color: var(--accent-purple); font-size: 0.85rem;">
+                            {{ f.rule_triggered }}
+                        </span>
+                    </td>
+                    <td class="log-severity-cell">
+                        <span class="badge {% if f.severity_score >= 9 %}badge-critical{% elif f.severity_score >= 7 %}badge-high{% else %}badge-medium{% endif %}" data-severity="{{ f.severity_of_finding | lower }}">
+                            {{ f.severity_of_finding }} ({{ f.severity_score }}/10)
+                        </span>
+                    </td>
+                    <td>
+                        <span style="font-family: monospace; color: var(--accent-blue); font-weight: 600;">
+                            {{ (f.confidence * 100) | round(0) | int }}%
+                        </span>
+                    </td>
+                    <td style="font-family: monospace; font-size: 0.85rem; color: var(--text-secondary);">
+                        {{ f.alert_id[:8] if f.alert_id else 'N/A' }} / {{ f.case_id[:8] if f.case_id else 'N/A' }}
+                    </td>
+                    <td style="text-align: right; white-space: nowrap;">
+                        <a href="/finding/{{ f.entity_id }}/{{ f.finding_idx }}" class="btn" style="padding: 4px 8px; font-size: 0.75rem; margin-right: 4px;">Dossier</a>
+                        <a href="/finding/{{ f.entity_id }}/{{ f.finding_idx }}/trace" class="btn" style="padding: 4px 8px; font-size: 0.75rem; background: rgba(0, 240, 255, 0.1); border-color: rgba(0, 240, 255, 0.3); color: var(--accent-blue);">Trace 🔍</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            {% endif %}
+        </table>
+    </div>
+</div>
+
+<script>
+    function filterLogs() {
+        let textFilter = document.getElementById('logSearch').value.toLowerCase();
+        let sevFilter = document.getElementById('severityFilter').value.toLowerCase();
+        let rows = document.querySelectorAll('.log-row');
+        
+        rows.forEach(row => {
+            let entity = row.querySelector('.log-entity').textContent.toLowerCase();
+            let rule = row.querySelector('.log-rule').textContent.toLowerCase();
+            let severity = row.querySelector('.log-severity-cell .badge').getAttribute('data-severity');
+            
+            let textMatch = entity.includes(textFilter) || rule.includes(textFilter);
+            let sevMatch = sevFilter === "" || severity === sevFilter;
+            
+            if (textMatch && sevMatch) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    }
+
+    document.getElementById('logSearch').addEventListener('keyup', filterLogs);
+    document.getElementById('severityFilter').addEventListener('change', filterLogs);
+</script>
+{% endblock %}

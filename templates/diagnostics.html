@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="text-gradient" style="font-size: 2.5rem; margin-bottom: 0.5rem;">Engine Diagnostics & Tuning</h1>
+        <p class="text-muted" style="font-size: 1.1rem;">Supervisory configuration panel for Layer A & B Analytics</p>
+    </div>
+</div>
+
+<div class="grid-3" style="margin-bottom: 2.5rem;">
+    <div class="card" style="display: flex; flex-direction: column; justify-content: center; align-items: center; border-color: rgba(16, 185, 129, 0.4); box-shadow: 0 0 20px rgba(16, 185, 129, 0.1);">
+        <h3 class="text-muted" style="font-size: 1rem; margin-bottom: 1rem;">System Health</h3>
+        <div class="text-success" style="font-size: 2.5rem; font-weight: 700; font-family: 'Outfit'; display: flex; align-items: center; gap: 10px;">
+            <div class="pulse-indicator"></div>
+            ONLINE
+        </div>
+        <p class="text-muted" style="font-size: 0.85rem; margin-top: 1rem;">All Analytics Pipelines Nominal</p>
+    </div>
+    
+    <div class="card">
+        <h3 class="text-muted" style="font-size: 1rem;">Engine Evaluation</h3>
+        <div style="margin-top: 1.5rem;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                <span>Layer A Recall</span>
+                <span class="text-success" style="font-family: monospace; font-weight: 600;">100.0%</span>
+            </div>
+            <div style="background: rgba(255,255,255,0.05); height: 4px; border-radius: 2px;">
+                <div style="background: var(--accent-success); width: 100%; height: 100%;"></div>
+            </div>
+        </div>
+        <div style="margin-top: 1.5rem;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                <span>Total Data Points Analyzed</span>
+                <span class="text-gradient" style="font-family: monospace; font-weight: 600;">{{ total_alerts }}</span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card">
+        <h3 class="text-muted" style="font-size: 1rem; margin-bottom: 1rem;">Active Policies</h3>
+        <ul style="list-style: none; padding: 0;">
+            <li style="margin-bottom: 0.5rem; display: flex; align-items: center; gap: 8px;">
+                <span style="color: var(--accent-blue);">&#10003;</span> Fast Closure Check
+            </li>
+            <li style="margin-bottom: 0.5rem; display: flex; align-items: center; gap: 8px;">
+                <span style="color: var(--accent-blue);">&#10003;</span> NLP Templated Notes
+            </li>
+            <li style="margin-bottom: 0.5rem; display: flex; align-items: center; gap: 8px;">
+                <span style="color: var(--accent-blue);">&#10003;</span> Statistical Z-Scores
+            </li>
+            <li style="display: flex; align-items: center; gap: 8px;">
+                <span style="color: var(--accent-blue);">&#10003;</span> Isolation Forest ML
+            </li>
+        </ul>
+    </div>
+</div>
+
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <h2>Configuration Tuning</h2>
+        <span class="badge badge-medium">Requires Admin Key</span>
+    </div>
+    
+    <div class="grid-3">
+        <div>
+            <label style="display: block; color: var(--text-secondary); margin-bottom: 0.5rem; font-size: 0.9rem;">Z-Score Sensitivity Threshold</label>
+            <input type="range" min="1" max="5" value="3" disabled style="width: 100%; accent-color: var(--accent-blue); opacity: 0.5; cursor: not-allowed;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: #64748b; margin-top: 0.5rem;">
+                <span>Low</span>
+                <span>Current: 3.0</span>
+                <span>High</span>
+            </div>
+        </div>
+        
+        <div>
+            <label style="display: block; color: var(--text-secondary); margin-bottom: 0.5rem; font-size: 0.9rem;">Contamination Rate (Layer B)</label>
+            <input type="range" min="0" max="100" value="5" disabled style="width: 100%; accent-color: var(--accent-purple); opacity: 0.5; cursor: not-allowed;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: #64748b; margin-top: 0.5rem;">
+                <span>0.01</span>
+                <span>Current: 0.05</span>
+                <span>0.10</span>
+            </div>
+        </div>
+        
+        <div>
+            <label style="display: block; color: var(--text-secondary); margin-bottom: 0.5rem; font-size: 0.9rem;">Data Retention Policy</label>
+            <select disabled style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); padding: 8px 12px; border-radius: 6px; color: #64748b; opacity: 0.5; cursor: not-allowed;">
+                <option>90 Days (Standard)</option>
+            </select>
+        </div>
+    </div>
+    <div style="margin-top: 2rem; padding: 1rem; background: rgba(245, 158, 11, 0.1); border-left: 4px solid var(--accent-warning); border-radius: 4px;">
+        <p style="color: var(--accent-warning); font-size: 0.9rem; margin: 0;">
+            <strong style="font-family: 'Outfit';">READ ONLY:</strong> Configuration changes are disabled in the offline supervisory mode to preserve compliance integrity.
+        </p>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAT-SA Command Center</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="{{ url_for('static', filename='js/chart.umd.js') }}"></script>
+</head>
+<body>
+    <div class="sidebar">
+        <div style="margin-bottom: 3rem;">
+            <div class="brand">SAT-SA</div>
+            <div style="font-size: 0.8rem; letter-spacing: 0.1em; color: var(--accent-blue); text-transform: uppercase; font-weight: 600;">
+                Supervisory Terminal
+            </div>
+        </div>
+        
+        <ul style="list-style: none;">
+            <li>
+                <a href="/" class="nav-link {% if request.path == '/' %}active{% endif %}">
+                    <svg style="width: 16px; height: 16px; display: inline-block; vertical-align: middle; margin-right: 8px; margin-top: -2px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+                    Risk Overview
+                </a>
+            </li>
+            <li>
+                <a href="/sector_benchmarks" class="nav-link {% if request.path == '/sector_benchmarks' %}active{% endif %}">
+                    <svg style="width: 16px; height: 16px; display: inline-block; vertical-align: middle; margin-right: 8px; margin-top: -2px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                    Sector Benchmarks
+                </a>
+            </li>
+            <li>
+                <a href="/raw_anomalies" class="nav-link {% if request.path == '/raw_anomalies' %}active{% endif %}">
+                    <svg style="width: 16px; height: 16px; display: inline-block; vertical-align: middle; margin-right: 8px; margin-top: -2px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                    Raw Anomalies
+                </a>
+            </li>
+            <li>
+                <a href="/diagnostics" class="nav-link {% if request.path == '/diagnostics' %}active{% endif %}">
+                    <svg style="width: 16px; height: 16px; display: inline-block; vertical-align: middle; margin-right: 8px; margin-top: -2px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                    Engine Diagnostics
+                </a>
+            </li>
+        </ul>
+        
+        <div style="position: absolute; bottom: 2.5rem;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="width: 36px; height: 36px; border-radius: 50%; background: var(--gradient-primary); display: flex; align-items: center; justify-content: center; font-weight: bold; font-family: Outfit;">
+                    JD
+                </div>
+                <div>
+                    <div style="font-size: 0.9rem; font-weight: 600; color: #fff;">Supervisor</div>
+                    <div style="font-size: 0.75rem; color: var(--accent-success);">Secure Session</div>
+                </div>
+            </div>
+            <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--glass-border);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                    <small class="text-muted" style="display: flex; align-items: center; gap: 6px;">
+                        <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--accent-blue); box-shadow: 0 0 5px var(--accent-blue);"></span>
+                        Offline Mode
+                    </small>
+                    <small id="liveClock" class="text-muted" style="font-family: monospace;"></small>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="main-content">
+        {% block content %}{% endblock %}
+    </div>
+    <script>
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('liveClock').textContent = now.toLocaleTimeString('en-US', { hour12: false });
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+    </script>
+</body>
+</html>
